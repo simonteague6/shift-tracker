@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Earnings Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .container { width: 100%; max-width: 480px; padding: 24px; }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 24px; font-weight: 600; }
+
+  /* Form styles */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 0.85rem; color: #8b949e; margin-bottom: 6px; }
+  input[type="number"], input[type="time"], select {
+    width: 100%;
+    padding: 10px 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: #58a6ff; }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+
+  /* Radio toggle */
+  .toggle-group {
+    display: flex;
+    background: #161b22;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .toggle-group input[type="radio"] { display: none; }
+  .toggle-group label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #8b949e;
+    margin: 0;
+    transition: all 0.2s;
+  }
+  .toggle-group input:checked + label {
+    background: #1f6feb;
+    color: #fff;
+  }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 8px;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #1f6feb; color: #fff; }
+  .btn-secondary { background: #30363d; color: #e6edf3; }
+
+  /* Tracker view */
+  #tracker { display: none; text-align: center; }
+  .earnings {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    letter-spacing: -1px;
+  }
+  .overtime-label {
+    display: none;
+    font-size: 0.8rem;
+    color: #f0883e;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .breakdown {
+    color: #8b949e;
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+  }
+  .breakdown span { margin: 0 8px; }
+
+  /* Progress bar */
+  .progress-container {
+    background: #161b22;
+    border-radius: 12px;
+    height: 20px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    border: 1px solid #30363d;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00c853, #2196f3);
+    border-radius: 12px;
+    transition: width 0.3s ease;
+  }
+  .progress-bar.overtime {
+    background: linear-gradient(90deg, #f0883e, #f85149);
+  }
+  .progress-pct {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-bottom: 20px;
+  }
+
+  /* Time info */
+  .time-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-bottom: 24px;
+  }
+
+  /* Settings row in tracker */
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    color: #8b949e;
+  }
+  .settings-row select {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 500px) {
+    .earnings { font-size: 2.5rem; }
+    .container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Setup Form -->
+  <div id="setup">
+    <h1>Shift Earnings Tracker</h1>
+
+    <div class="toggle-group">
+      <input type="radio" name="mode" id="mode-hours" value="hours" checked>
+      <label for="mode-hours">Total Hours</label>
+      <input type="radio" name="mode" id="mode-times" value="times">
+      <label for="mode-times">Start &amp; End Time</label>
+    </div>
+
+    <div id="hours-input">
+      <div class="row">
+        <div class="form-group">
+          <label for="hours">Hours</label>
+          <input type="number" id="hours" min="0" max="24" step="1" placeholder="8">
+        </div>
+        <div class="form-group">
+          <label for="minutes">Minutes</label>
+          <input type="number" id="minutes" min="0" max="59" step="1" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div id="times-input" style="display:none">
+      <div class="row">
+        <div class="form-group">
+          <label for="start-time">Start Time</label>
+          <input type="time" id="start-time">
+        </div>
+        <div class="form-group">
+          <label for="end-time">End Time</label>
+          <input type="time" id="end-time">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="rate">Hourly Pay ($)</label>
+      <input type="number" id="rate" min="0" step="0.01" placeholder="25.00">
+    </div>
+
+    <div class="form-group">
+      <label for="speed">Update Speed</label>
+      <select id="speed">
+        <option value="1000">Every 1 second</option>
+        <option value="500">Every 500ms</option>
+        <option value="100">Every 100ms</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" onclick="startShift()">Start Shift</button>
+    <div id="error" style="color:#f85149;font-size:0.85rem;margin-top:8px;text-align:center"></div>
+  </div>
+
+  <!-- Tracker View -->
+  <div id="tracker">
+    <h1>Shift Earnings</h1>
+    <div class="overtime-label" id="overtime-label">Overtime</div>
+    <div class="earnings" id="earnings-display">$0.00</div>
+    <div class="breakdown">
+      <span id="per-min">$0.00/min</span>
+      <span>&middot;</span>
+      <span id="per-sec">$0.000/sec</span>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-pct" id="progress-pct">0%</div>
+
+    <div class="time-info">
+      <div>Elapsed: <strong id="elapsed">00:00:00</strong></div>
+      <div>Remaining: <strong id="remaining">00:00:00</strong></div>
+    </div>
+
+    <div class="settings-row">
+      <label for="speed-live" style="margin:0">Update speed:</label>
+      <select id="speed-live" onchange="changeSpeed()">
+        <option value="1000">1s</option>
+        <option value="500">500ms</option>
+        <option value="100">100ms</option>
+      </select>
+    </div>
+
+    <button class="btn btn-secondary" onclick="endShift()">End Shift</button>
+  </div>
+
+</div>
+
+<script>
+  let shiftStart, shiftEnd, hourlyRate, intervalId;
+
+  // Toggle input mode
+  document.querySelectorAll('input[name="mode"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const isHours = r.value === 'hours';
+      document.getElementById('hours-input').style.display = isHours ? '' : 'none';
+      document.getElementById('times-input').style.display = isHours ? 'none' : '';
+    });
+  });
+
+  function showError(msg) {
+    document.getElementById('error').textContent = msg;
+  }
+
+  function startShift() {
+    showError('');
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    hourlyRate = parseFloat(document.getElementById('rate').value);
+
+    if (!hourlyRate || hourlyRate <= 0) {
+      showError('Please enter a valid hourly pay.');
+      return;
+    }
+
+    const now = new Date();
+
+    if (mode === 'hours') {
+      const h = parseInt(document.getElementById('hours').value) || 0;
+      const m = parseInt(document.getElementById('minutes').value) || 0;
+      const totalMs = (h * 3600 + m * 60) * 1000;
+      if (totalMs <= 0) {
+        showError('Please enter a valid shift duration.');
+        return;
+      }
+      shiftStart = now;
+      shiftEnd = new Date(now.getTime() + totalMs);
+    } else {
+      const startVal = document.getElementById('start-time').value;
+      const endVal = document.getElementById('end-time').value;
+      if (!startVal || !endVal) {
+        showError('Please enter both start and end times.');
+        return;
+      }
+      const [sh, sm] = startVal.split(':').map(Number);
+      const [eh, em] = endVal.split(':').map(Number);
+
+      shiftStart = new Date(now);
+      shiftStart.setHours(sh, sm, 0, 0);
+      shiftEnd = new Date(now);
+      shiftEnd.setHours(eh, em, 0, 0);
+
+      // Handle overnight shifts
+      if (shiftEnd <= shiftStart) {
+        shiftEnd.setDate(shiftEnd.getDate() + 1);
+      }
+    }
+
+    // Set rate breakdown
+    const perMin = hourlyRate / 60;
+    const perSec = hourlyRate / 3600;
+    document.getElementById('per-min').textContent = `$${perMin.toFixed(3)}/min`;
+    document.getElementById('per-sec').textContent = `$${perSec.toFixed(4)}/sec`;
+
+    // Sync speed selectors
+    const speed = document.getElementById('speed').value;
+    document.getElementById('speed-live').value = speed;
+
+    // Switch views
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('tracker').style.display = 'block';
+
+    // Start interval
+    update();
+    intervalId = setInterval(update, parseInt(speed));
+  }
+
+  function update() {
+    const now = new Date();
+    const totalDuration = shiftEnd - shiftStart;
+    const elapsed = now - shiftStart;
+    const elapsedSec = Math.max(0, elapsed / 1000);
+    const earnings = elapsedSec * (hourlyRate / 3600);
+    const progress = Math.min((elapsed / totalDuration) * 100, 100);
+    const isOvertime = now > shiftEnd;
+
+    // Earnings
+    document.getElementById('earnings-display').textContent = `$${earnings.toFixed(2)}`;
+
+    // Progress
+    const bar = document.getElementById('progress-bar');
+    bar.style.width = progress + '%';
+    bar.classList.toggle('overtime', isOvertime);
+    document.getElementById('progress-pct').textContent =
+      isOvertime ? '100% (overtime)' : Math.floor(progress) + '%';
+
+    // Overtime label
+    document.getElementById('overtime-label').style.display = isOvertime ? '' : 'none';
+
+    // Time displays
+    document.getElementById('elapsed').textContent = formatDuration(Math.max(0, elapsed));
+    const remaining = Math.max(0, shiftEnd - now);
+    document.getElementById('remaining').textContent = remaining > 0 ? formatDuration(remaining) : '00:00:00';
+  }
+
+  function formatDuration(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  function changeSpeed() {
+    const speed = parseInt(document.getElementById('speed-live').value);
+    clearInterval(intervalId);
+    intervalId = setInterval(update, speed);
+  }
+
+  function endShift() {
+    clearInterval(intervalId);
+    document.getElementById('setup').style.display = '';
+    document.getElementById('tracker').style.display = 'none';
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('overtime-label').style.display = 'none';
+  }
+</script>
+</body>
+</html>
